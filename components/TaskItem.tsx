@@ -96,7 +96,7 @@ export default function TaskItem({ task, createdByName, onToggle, onDelete, onEd
           !task.completed && (
             <button
               onClick={startEdit}
-              className="p-2 text-stone-400 hover:text-stone-700 transition-colors"
+              className="p-2 rounded-md text-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
               aria-label="Modifier"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -110,7 +110,7 @@ export default function TaskItem({ task, createdByName, onToggle, onDelete, onEd
         {/* Supprimer — toujours visible */}
         <button
           onClick={() => onDelete(task.id)}
-          className="p-2 text-stone-400 hover:text-red-500 transition-colors"
+          className="p-2 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
           aria-label="Supprimer"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

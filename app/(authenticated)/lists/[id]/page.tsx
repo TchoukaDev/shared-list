@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import ListCard from "@/components/ListCard"
+import InviteButton from "@/components/InviteButton"
 
 export default async function ListDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -43,6 +44,12 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
         </svg>
         Mes listes
       </Link>
+
+      {list.owner_id === user.id && (
+        <div className="flex justify-end">
+          <InviteButton listId={list.id} />
+        </div>
+      )}
 
       <ListCard list={list} tasks={tasks ?? []} index={listIndex} userId={user.id} />
     </div>

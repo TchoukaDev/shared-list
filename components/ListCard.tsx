@@ -144,14 +144,17 @@ export default function ListCard({ list, tasks: initialTasks, index, userId, mem
   return (
     <div className="card overflow-hidden">
 
-      {/* ── Header ── */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-200">
-        <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color }} aria-hidden="true" />
+      {/* ── Header — fond teinté avec la couleur de la liste ── */}
+      <div
+        className="flex items-center gap-3 px-4 py-4 border-b border-stone-200"
+        style={{ backgroundColor: `${color}18` }}
+      >
+        <span className="w-4 h-4 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: color }} aria-hidden="true" />
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-stone-900 text-sm truncate">{list.name}</h2>
+          <h2 className="font-semibold text-stone-900 truncate">{list.name}</h2>
           <div className="flex items-center gap-2 mt-0.5">
             {tasks.length > 0 && (
-              <p className="text-xs text-stone-400">
+              <p className="text-xs font-medium" style={{ color }}>
                 {completedCount}/{tasks.length} complété{completedCount > 1 ? "s" : ""}
               </p>
             )}

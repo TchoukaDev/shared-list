@@ -99,9 +99,26 @@ Couleurs des listes : `listColor(index)` dans `lib/utils.ts` — cycle automatiq
 - Gérer l'optimistic update : réordonner localement avant la confirmation Supabase
 
 ### 5. Inviter un utilisateur dans une liste
-- **Modèle de données** : table `list_members` (`list_id`, `user_id`, `role: 'owner' | 'member'`, `invited_at`, `joined_at`)
-- **RLS** : les membres voient et modifient les listes/tâches auxquelles ils ont accès
-- **Invitation par email** : saisir l'email → vérifier que l'utilisateur existe dans `auth.users` → insérer dans `list_members`
-- **UI** : bouton "Inviter" dans `ListCard` → sheet/modal avec champ email + liste des membres actuels
+- **État actuel** : UI + route `/api/invite` fonctionnelle, recherche par email via `auth.admin.listUsers()` + `.find()`
+- **Priorité 1 — Table `profiles`** : remplacer le `.find()` par un vrai `select` sur une table `profiles` synchronisée avec `auth.users` via trigger Postgres :
+  ```sql
+  create table profiles (
+    id    uuid primary key references auth.users(id) on delete cascade,
+    email text not null
+  );
+  create function sync_profile() returns trigger as $$
+  begin
+    insert into profiles (id, email) values (new.id, new.email);
+    return new;
+  end;
+  $$ language plpgsql security definer;
+  create trigger on_auth_user_created
+    after insert on auth.users for each row execute function sync_profile();
+  ```
+  Ensuite dans `/api/invite` : `.from("profiles").select("id").eq("email", email).single()` — plus besoin du client admin pour cette opération
+- **Priorité 2 — Email de notification avec Resend** : envoyer un email à l'invité après insertion dans `list_members`
+  - Installer `resend` + configurer `RESEND_API_KEY` dans `.env.local`
+  - Appeler `resend.emails.send(...)` à la fin de la route `/api/invite`
+  - Template minimal : nom de la liste + nom de l'owner + lien vers l'app
+- **Masquer le bouton supprimer** pour les membres non-owner (comparer `list.owner_id` avec `userId` en prop)
 - **Gestion des rôles** : seul l'`owner` peut inviter / retirer des membres
-- Pas de système d'invitation par lien pour l'instant (utilisateurs pré-créés manuellement)
