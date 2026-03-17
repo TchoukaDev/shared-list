@@ -1,26 +1,37 @@
 import Link from "next/link"
+import { notFound, redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
 import ListCard from "@/components/ListCard"
-import type { List, Task } from "@/lib/types"
 
-// Données fictives — à remplacer par une requête Supabase avec le vrai id
-const MOCK_LIST: List = {
-  id: "1", name: "Courses", owner_id: "u1",
-  created_at: "", updated_at: "2025-01-12T10:30:00Z",
-}
+export default async function ListDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
 
-const MOCK_TASKS: Task[] = [
-  { id: "t1", list_id: "1", content: "Tomates cerises", completed: false, position: 0, created_by: "u1", created_at: "", updated_at: "" },
-  { id: "t2", list_id: "1", content: "Pain de campagne", completed: true,  position: 1, created_by: "u2", created_at: "", updated_at: "" },
-  { id: "t3", list_id: "1", content: "Comté 18 mois",   completed: false, position: 2, created_by: "u1", created_at: "", updated_at: "" },
-]
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
 
-// Mapping user_id → nom affiché — à remplacer par les vrais profils Supabase
-const MOCK_MEMBER_NAMES: Record<string, string> = {
-  u1: "Romain",
-  u2: "Marie",
-}
+  const { data: list } = await supabase
+    .from("lists")
+    .select("*")
+    .eq("id", id)
+    .single()
 
-export default function ListDetailPage() {
+  if (!list) notFound()
+
+  const { data: tasks } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("list_id", id)
+    .order("position", { ascending: true })
+
+  // Calcule l'index de la liste pour déterminer sa couleur
+  const { data: allLists } = await supabase
+    .from("lists")
+    .select("id")
+    .order("updated_at", { ascending: true })
+
+  const listIndex = allLists?.findIndex(l => l.id === id) ?? 0
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
       <Link
@@ -32,8 +43,8 @@ export default function ListDetailPage() {
         </svg>
         Mes listes
       </Link>
-      {/* index=0 en mock — en prod, ce sera la position réelle dans la liste */}
-      <ListCard list={MOCK_LIST} tasks={MOCK_TASKS} index={0} memberNames={MOCK_MEMBER_NAMES} />
+
+      <ListCard list={list} tasks={tasks ?? []} index={listIndex} userId={user.id} />
     </div>
   )
 }

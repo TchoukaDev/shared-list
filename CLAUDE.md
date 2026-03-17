@@ -97,3 +97,11 @@ Couleurs des listes : `listColor(index)` dans `lib/utils.ts` — cycle automatiq
 - Drag des listes sur la page d'accueil → mettre à jour l'ordre en DB
 - Drag des tâches dans une liste → mettre à jour le champ `position` en DB
 - Gérer l'optimistic update : réordonner localement avant la confirmation Supabase
+
+### 5. Inviter un utilisateur dans une liste
+- **Modèle de données** : table `list_members` (`list_id`, `user_id`, `role: 'owner' | 'member'`, `invited_at`, `joined_at`)
+- **RLS** : les membres voient et modifient les listes/tâches auxquelles ils ont accès
+- **Invitation par email** : saisir l'email → vérifier que l'utilisateur existe dans `auth.users` → insérer dans `list_members`
+- **UI** : bouton "Inviter" dans `ListCard` → sheet/modal avec champ email + liste des membres actuels
+- **Gestion des rôles** : seul l'`owner` peut inviter / retirer des membres
+- Pas de système d'invitation par lien pour l'instant (utilisateurs pré-créés manuellement)

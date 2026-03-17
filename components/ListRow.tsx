@@ -1,48 +1,118 @@
 "use client"
 
-import Link from "next/link"
+import { useState } from "react"
+import { createPortal } from "react-dom"
 import type { List } from "@/lib/types"
-import { listColor } from "@/lib/utils"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
+import ListRowMobile from "@/components/ListRowMobile"
+import ListRowDesktop from "@/components/ListRowDesktop"
+import EditListModal from "@/components/modals/EditListModal"
+import DeleteListModal from "@/components/modals/DeleteListModal"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "react-toastify"
 
 interface Props {
   list: List
-  index: number       // position dans la liste — détermine la couleur
+  index: number
   taskCount: number
   completedCount: number
 }
 
-// Ligne représentant une liste sur la page d'accueil.
-// Affiche : couleur, nom, progression des tâches, et un lien vers la page détail.
 export default function ListRow({ list, index, taskCount, completedCount }: Props) {
-  const color = listColor(index)
+  const supabase = createClient()
+  const isDesktop = useMediaQuery("(min-width: 768px)")
+  const [showEdit, setShowEdit] = useState(false)
+  const [showDelete, setShowDelete] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleEdit = async (id: string, name: string) => {
+    setIsLoading(true)
+
+    if (!id) {
+      toast.error("Liste introuvable, essayez de recharger la page")
+      return
+    }
+    if (!name.trim()) {
+      toast.error("Un nom est requis pour la liste")
+      return
+    }
+    if (name.length > 255) {
+      toast.error("Le nom de la liste doit être inférieur à 255 caractères");
+      return;
+    }
+
+    try {
+      const { count: existingName, error } = await supabase.from("lists").select("*", { count: "exact", head: true }).eq('name', name)
+
+      if (error) {
+        toast.error("Une erreur est survenue lors de la récupération des listes")
+        return
+      }
+
+      if (existingName && existingName > 0) {
+        toast.error("Ce nom de liste est déjà utilisé")
+        return
+      }
+
+      const { error: updateError } = await supabase.from("lists").update({ name }).eq("id", id)
+      if (updateError) {
+        toast.error("Impossible de modifier la liste, elle n'existe peut-être plus")
+        return
+      }
+      toast.success("Nom de liste modifié avec succès")
+      setShowEdit(false)
+    } catch (error) {
+      toast.error("Une erreur est survenue lors de la modification")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+
+    if (!id) {
+      toast.error("Cette liste est introuvable, veuillez recharger la page")
+      return
+    }
+    try {
+      const { error: deleteError } = await supabase.from("lists").delete().eq("id", id)
+      if (deleteError) {
+        toast.error("Impossible de supprimer la liste, elle n'existe peut être plus.")
+        return
+      }
+      toast.success("Liste supprimée avec succès")
+      setShowDelete(false)
+    } catch (error) {
+      toast.error("Une erreur est survenue lors de la suppression")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const sharedProps = {
+    list,
+    index,
+    taskCount,
+    completedCount,
+    onEdit: () => setShowEdit(true),
+    onDelete: () => setShowDelete(true),
+  }
+
   return (
-    <Link
-      href={`/lists/${list.id}`}
-      className="card flex items-center gap-4 px-4 py-4 active:scale-[0.98] transition-transform"
-    >
-      {/* Pastille de couleur */}
-      <span
-        className="w-3 h-3 rounded-full shrink-0"
-        style={{ backgroundColor: color }}
-        aria-hidden="true"
-      />
+    <>
+      {isDesktop
+        ? <ListRowDesktop {...sharedProps} />
+        : <ListRowMobile {...sharedProps} />
+      }
 
-      {/* Nom + progression */}
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-stone-900 text-sm truncate">{list.name}</p>
-        {taskCount > 0 ? (
-          <p className="text-xs text-stone-400 mt-0.5">
-            {completedCount}/{taskCount} complété{completedCount > 1 ? "s" : ""}
-          </p>
-        ) : (
-          <p className="text-xs text-stone-300 mt-0.5">Aucun élément</p>
-        )}
-      </div>
-
-      {/* Chevron — indique la navigation */}
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-300 shrink-0" aria-hidden="true">
-        <polyline points="9 18 15 12 9 6" />
-      </svg>
-    </Link>
+      {showEdit && createPortal(
+        <EditListModal list={list} onClose={() => setShowEdit(false)} onEdit={handleEdit} isLoading={isLoading} />,
+        document.body
+      )}
+      {showDelete && createPortal(
+        <DeleteListModal list={list} onClose={() => setShowDelete(false)} onDelete={handleDelete} isLoading={isLoading} />,
+        document.body
+      )}
+    </>
   )
 }

@@ -12,6 +12,13 @@ export interface List {
   updated_at: string  // date ISO mise à jour automatiquement par Supabase
 }
 
+// Résultat enrichi pour la page d'accueil (liste + compteurs calculés)
+export interface ListWithCount {
+  list: List
+  taskCount: number
+  completedCount: number
+}
+
 // Table "tasks" — un item dans une liste
 export interface Task {
   id: string          // identifiant unique
