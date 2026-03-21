@@ -5,10 +5,10 @@ import { toast } from "react-toastify"
 import { createClient } from "@/lib/supabase/client"
 import type { List, Task } from "@/lib/types"
 
-// Clé stable pour React — ne change pas quand l'id temporaire est remplacé par l'id réel
-type TaskWithKey = Task & { _reactKey: string }
+
 import { listColor } from "@/lib/utils"
 import TaskItem from "./TaskItem"
+import { useRealtimeTasks } from "@/hooks/useRealtimeTasks"
 
 interface Props {
   list: List
@@ -20,9 +20,7 @@ interface Props {
 
 export default function ListCard({ list, tasks: initialTasks, index, userId, memberNames = {} }: Props) {
   const supabase = createClient()
-  const [tasks, setTasks] = useState<TaskWithKey[]>(
-    initialTasks.map(t => ({ ...t, _reactKey: t.id }))
-  )
+  const { tasks, setTasks } = useRealtimeTasks(list.id, initialTasks)
   const [addingTask, setAddingTask] = useState(false)
   const [newTaskContent, setNewTaskContent] = useState("")
 
@@ -44,7 +42,7 @@ export default function ListCard({ list, tasks: initialTasks, index, userId, mem
 
     // Optimistic update
     const tempId = `temp-${Date.now()}`
-    const tempTask: TaskWithKey = {
+    const tempTask: Task & { _reactKey: string } = {
       id: tempId,
       _reactKey: tempId,
       list_id: list.id,

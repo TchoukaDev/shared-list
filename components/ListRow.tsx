@@ -16,9 +16,11 @@ interface Props {
   index: number
   taskCount: number
   completedCount: number
+  userId: string | null
 }
 
-export default function ListRow({ list, index, taskCount, completedCount }: Props) {
+export default function ListRow({ list, index, taskCount, completedCount, userId }: Props) {
+  const isOwner = userId === list.owner_id
   const supabase = createClient()
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const [showEdit, setShowEdit] = useState(false)
@@ -26,6 +28,10 @@ export default function ListRow({ list, index, taskCount, completedCount }: Prop
   const [isLoading, setIsLoading] = useState(false)
 
   const handleEdit = async (id: string, name: string) => {
+    if (!isOwner) {
+      toast.error("Tu n'es pas autorisé à modifier cette liste")
+      return
+    }
     setIsLoading(true)
 
     if (!id) {
@@ -69,6 +75,10 @@ export default function ListRow({ list, index, taskCount, completedCount }: Prop
   }
 
   const handleDelete = async (id: string) => {
+    if (!isOwner) {
+      toast.error("Tu n'es pas autorisé à supprimer cette liste")
+      return
+    }
 
     if (!id) {
       toast.error("Cette liste est introuvable, veuillez recharger la page")
@@ -94,8 +104,9 @@ export default function ListRow({ list, index, taskCount, completedCount }: Prop
     index,
     taskCount,
     completedCount,
-    onEdit: () => setShowEdit(true),
-    onDelete: () => setShowDelete(true),
+    isOwner,
+    onEdit: isOwner ? () => setShowEdit(true) : undefined,
+    onDelete: isOwner ? () => setShowDelete(true) : undefined,
   }
 
   return (

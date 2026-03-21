@@ -46,16 +46,16 @@ export default function Navbar({ profile }: Props) {
               className="rounded-full object-cover"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-terra-200 flex items-center justify-center text-terra-600 text-xs font-medium">
-              {/* Initiales si pas d'avatar */}
-              {profile?.first_name?.[0]?.toUpperCase() ?? "?"}
+            <div className="w-8 h-8 rounded-full bg-terra-200 flex items-center justify-center text-terra-600">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
             </div>
           )}
-          {(profile?.first_name || profile?.last_name) && (
-            <span className="text-sm font-medium text-stone-800 hidden sm:block">
-              {[profile.first_name, profile.last_name].filter(Boolean).join(" ")}
-            </span>
-          )}
+          <span className="text-sm font-medium text-stone-800 hidden sm:block">
+            {[profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.email}
+          </span>
         </button>
 
         {/* Titre centré */}

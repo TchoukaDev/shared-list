@@ -10,14 +10,15 @@ interface Props {
   index: number
   taskCount: number
   completedCount: number
-  onEdit: () => void
-  onDelete: () => void
+  isOwner: boolean
+  onEdit?: () => void
+  onDelete?: () => void
 }
 
 const SWIPE_THRESHOLD = 60
 const ACTIONS_WIDTH = 96
 
-export default function ListRowMobile({ list, index, taskCount, completedCount, onEdit, onDelete }: Props) {
+export default function ListRowMobile({ list, index, taskCount, completedCount, isOwner, onEdit, onDelete }: Props) {
   const color = listColor(index)
 
   const [offsetX, setOffsetX] = useState(0)
@@ -41,12 +42,14 @@ export default function ListRowMobile({ list, index, taskCount, completedCount, 
   }, [swiped])
 
   function handlePointerDown(e: React.PointerEvent) {
+    if (!isOwner) return
     if ((e.target as HTMLElement).closest("[data-action]")) return
     startX.current = e.clientX
     isDragging.current = false
   }
 
   function handlePointerMove(e: React.PointerEvent) {
+    if (!isOwner) return
     const delta = e.clientX - startX.current
     if (Math.abs(delta) > 5) { isDragging.current = true; setDragging(true) }
 
@@ -84,38 +87,40 @@ export default function ListRowMobile({ list, index, taskCount, completedCount, 
 
   return (
     <div className="relative overflow-hidden rounded-lg">
-      {/* Boutons d'action */}
-      <div
-        className="absolute inset-y-0 right-0 flex items-stretch"
-        style={{ width: ACTIONS_WIDTH }}
-        aria-hidden={!swiped}
-      >
-        <button
-          data-action
-          onClick={() => { setOffsetX(0); setSwiped(false); onEdit() }}
-          className="flex-1 flex items-center justify-center bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors"
-          aria-label="Modifier la liste"
+      {/* Boutons d'action — visibles uniquement pour le owner */}
+      {isOwner && (
+        <div
+          className="absolute inset-y-0 right-0 flex items-stretch"
+          style={{ width: ACTIONS_WIDTH }}
+          aria-hidden={!swiped}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-          </svg>
-        </button>
+          <button
+            data-action
+            onClick={() => { setOffsetX(0); setSwiped(false); onEdit?.() }}
+            className="flex-1 flex items-center justify-center bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors"
+            aria-label="Modifier la liste"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
 
-        <button
-          data-action
-          onClick={() => { setOffsetX(0); setSwiped(false); onDelete() }}
-          className="flex-1 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white transition-colors"
-          aria-label="Supprimer la liste"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-            <path d="M10 11v6M14 11v6" />
-            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-          </svg>
-        </button>
-      </div>
+          <button
+            data-action
+            onClick={() => { setOffsetX(0); setSwiped(false); onDelete?.() }}
+            className="flex-1 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white transition-colors"
+            aria-label="Supprimer la liste"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6M14 11v6" />
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Contenu */}
       <div

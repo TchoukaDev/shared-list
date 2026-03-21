@@ -103,14 +103,12 @@ Couleurs des listes : `listColor(index)` dans `lib/utils.ts` — cycle automatiq
 - Brancher les vrais appels Supabase dans les pages (remplacer les MOCK_*)
 - Utiliser le client serveur (`lib/supabase/server.ts`) dans les Server Components
 
-### 2. Supabase Realtime
-- **Architecture :** Server Component pour le premier chargement (pas de flash de loading) + hook client pour le Realtime
-- Le Server Component fetch les données → les passe en props au composant client
-- Le composant client initialise son state avec ces données, puis s'abonne aux changements
-- Le navigateur ouvre une WebSocket directement vers Supabase (pas via Next.js server)
-- S'abonner via `supabase.channel().on('postgres_changes', ...)` — events `INSERT`, `UPDATE`, `DELETE`
-- À implémenter dans des hooks custom : `useRealtimeTasks(listId, initialTasks)` et `useRealtimeLists(initialLists)`
-- Différence avec TanStack Query + optimistic updates : ici les changements des **autres utilisateurs** arrivent en push, sans polling ni refetch manuel
+### 2. Supabase Realtime ✅
+- `useRealtimeTasks(listId, initialTasks)` — implémenté dans `hooks/useRealtimeTasks.ts`
+- `useRealtimeLists(initialLists)` — implémenté dans `hooks/useRealtimeLists.ts` (intérêt limité car les listes sont filtrées par RLS)
+- **Prérequis Supabase** : activer la table dans Database → Replication → publication `supabase_realtime`
+- **Filtre DELETE** : `payload.old` ne contient que la primary key par défaut (REPLICA IDENTITY DEFAULT) — ne pas filtrer par `list_id` sur les DELETE, filtrer côté client sur INSERT/UPDATE uniquement
+- **Déduplication INSERT** : vérifier `prev.some(t => t.id === newTask.id)` pour ignorer les events de nos propres optimistic updates
 
 ### 3. PWA
 - `public/manifest.json` — nom, icônes, couleurs, `display: standalone`
@@ -127,6 +125,7 @@ Couleurs des listes : `listColor(index)` dans `lib/utils.ts` — cycle automatiq
 ### 5. Inviter un utilisateur dans une liste
 - **État actuel** : UI + route `/api/invite` fonctionnelle, table `profiles` créée avec trigger sync depuis `auth.users`
 - La route utilise encore `auth.admin.listUsers()` — **à remplacer** par `.from("profiles").select("id").eq("email", email).single()`
+- Seul le owner peut inviter/modifier/supprimer une liste — boutons cachés + guards dans les handlers + RLS
 - **Email de notification avec Resend** : envoyer un email à l'invité après insertion dans `list_members`
   - Installer `resend` + configurer `RESEND_API_KEY` dans `.env.local`
   - Appeler `resend.emails.send(...)` à la fin de la route `/api/invite`

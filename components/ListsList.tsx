@@ -2,6 +2,7 @@
 
 import ListRow from "@/components/ListRow"
 import NewListButton from "@/components/NewListButton"
+import { useRealtimeLists } from "@/hooks/useRealtimeLists"
 import type { ListWithCount } from "@/lib/types"
 
 interface Props {
@@ -9,7 +10,8 @@ interface Props {
   userId: string | null
 }
 
-export default function ListsList({ lists, userId }: Props) {
+export default function ListsList({ lists: initialLists, userId }: Props) {
+  const lists = useRealtimeLists(initialLists)
 
   if (!userId) {
     return null;
@@ -24,7 +26,7 @@ export default function ListsList({ lists, userId }: Props) {
 
       {lists.length > 0 ? (
         lists.map(({ list, taskCount, completedCount }, index) => (
-          <ListRow key={list.id} list={list} index={index} taskCount={taskCount} completedCount={completedCount} />
+          <ListRow key={list.id} list={list} index={index} taskCount={taskCount} completedCount={completedCount} userId={userId} />
         ))
       ) : (
         <div className="card p-10 text-center">
