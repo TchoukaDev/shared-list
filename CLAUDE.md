@@ -9,22 +9,39 @@
 
 ```
 app/
-  (authenticated)/          # Routes protégées — layout avec Navbar
-    page.tsx                # Liste des listes (ListRow)
+  (authenticated)/          # Routes protégées — layout avec NavbarServer
+    page.tsx                # Liste des listes (ListsList)
     lists/[id]/page.tsx     # Détail d'une liste (ListCard + TaskItem)
   login/                    # Page publique
+  api/
+    invite/route.ts         # POST — invite un utilisateur dans une liste
 proxy.ts                    # Middleware auth (renommé depuis middleware.ts en Next.js 16)
 lib/
   supabase/
     client.ts               # Client browser (singleton)
     server.ts               # Client serveur (Server Components, Server Actions)
+    admin.ts                # Client admin (SUPABASE_SECRET_KEYS) — Route Handlers uniquement
   types.ts                  # Interfaces miroir du schéma Supabase
   utils.ts                  # cn(), formatDate(), listColor(index)
 components/
-  Navbar.tsx                # Sticky, terra-100, bouton logout
-  ListRow.tsx               # Ligne sur la page d'accueil (titre + progression + index)
-  ListCard.tsx              # Carte détail avec tâches (page /lists/[id])
+  NavbarServer.tsx          # Wrapper serveur — fetche le profil, passe en props à Navbar
+  Navbar.tsx                # Sticky, terra-100, profil à gauche + bouton logout
+  ListsList.tsx             # Client component — reçoit les listes en props
+  ListRow.tsx               # Orchestre ListRowMobile / ListRowDesktop via useMediaQuery
+  ListRowMobile.tsx         # Swipe gauche pour révéler edit/delete
+  ListRowDesktop.tsx        # Menu "..." pour edit/delete
+  ListCard.tsx              # Carte détail avec tâches + optimistic updates
   TaskItem.tsx              # Item individuel avec validation, edit, delete
+  InviteButton.tsx          # Bouton client + portal pour InviteModal (owner seulement)
+  NewListButton.tsx         # Bouton client + portal pour CreateListModal
+  modals/
+    CreateListModal.tsx
+    EditListModal.tsx
+    DeleteListModal.tsx
+    InviteModal.tsx
+    SettingsModal.tsx       # Profil : prénom, nom, avatar (upload vers bucket "avatars")
+hooks/
+  useMediaQuery.ts          # Hook SSR-safe pour responsive
 ```
 
 ## Design system — "Warm Sand & Terracotta"
@@ -51,7 +68,16 @@ Couleurs des listes : `listColor(index)` dans `lib/utils.ts` — cycle automatiq
 
 - `List` : `id, name, owner_id, created_at, updated_at` — pas de champ `color` (calculé via index)
 - `Task` : `id, list_id, content, completed, position, created_by, created_at, updated_at`
+- `Profile` : `id, email, first_name, last_name, avatar_url, created_at, updated_at`
+- `ListWithCount` : `{ list: List, taskCount: number, completedCount: number }`
 - Les compteurs (`taskCount`, `completedCount`) sont des props séparées, pas dans le type `List`
+
+## Supabase Storage
+
+- Bucket `avatars` — public, organisé par `{userId}/{timestamp}.{ext}`
+- Policies : INSERT, UPDATE, DELETE restreints au dossier de l'utilisateur via `storage.foldername(name)[1] = auth.uid()::text`
+- Domaine autorisé dans `next.config.ts` : `*.supabase.co` (wildcard) pour `next/image`
+- Ordre upload : 1. upload nouveau → 2. update profiles → 3. suppression ancien (évite la perte si l'update échoue)
 
 ## Auth
 
@@ -99,24 +125,9 @@ Couleurs des listes : `listColor(index)` dans `lib/utils.ts` — cycle automatiq
 - Gérer l'optimistic update : réordonner localement avant la confirmation Supabase
 
 ### 5. Inviter un utilisateur dans une liste
-- **État actuel** : UI + route `/api/invite` fonctionnelle, recherche par email via `auth.admin.listUsers()` + `.find()`
-- **Priorité 1 — Table `profiles`** : remplacer le `.find()` par un vrai `select` sur une table `profiles` synchronisée avec `auth.users` via trigger Postgres :
-  ```sql
-  create table profiles (
-    id    uuid primary key references auth.users(id) on delete cascade,
-    email text not null
-  );
-  create function sync_profile() returns trigger as $$
-  begin
-    insert into profiles (id, email) values (new.id, new.email);
-    return new;
-  end;
-  $$ language plpgsql security definer;
-  create trigger on_auth_user_created
-    after insert on auth.users for each row execute function sync_profile();
-  ```
-  Ensuite dans `/api/invite` : `.from("profiles").select("id").eq("email", email).single()` — plus besoin du client admin pour cette opération
-- **Priorité 2 — Email de notification avec Resend** : envoyer un email à l'invité après insertion dans `list_members`
+- **État actuel** : UI + route `/api/invite` fonctionnelle, table `profiles` créée avec trigger sync depuis `auth.users`
+- La route utilise encore `auth.admin.listUsers()` — **à remplacer** par `.from("profiles").select("id").eq("email", email).single()`
+- **Email de notification avec Resend** : envoyer un email à l'invité après insertion dans `list_members`
   - Installer `resend` + configurer `RESEND_API_KEY` dans `.env.local`
   - Appeler `resend.emails.send(...)` à la fin de la route `/api/invite`
   - Template minimal : nom de la liste + nom de l'owner + lien vers l'app

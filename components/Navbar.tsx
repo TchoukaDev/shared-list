@@ -1,11 +1,21 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { createPortal } from "react-dom"
 import { createClient } from "@/lib/supabase/client"
+import SettingsModal from "@/components/modals/SettingsModal"
+import { Profile } from "@/lib/types"
+import Image from "next/image"
 
-export default function Navbar() {
+interface Props {
+  profile: Profile | null
+}
+
+export default function Navbar({ profile }: Props) {
   const router = useRouter()
   const supabase = createClient()
+  const [showSettings, setShowSettings] = useState(false)
 
   // Déconnecte l'utilisateur côté client et redirige vers /login
   // Le proxy bloquera tout accès aux routes protégées dès la déconnexion
@@ -21,6 +31,33 @@ export default function Navbar() {
     >
       <div className="relative flex items-center justify-center px-4 h-14">
 
+        {/* Profil à gauche */}
+        <button
+          onClick={() => setShowSettings(true)}
+          className="absolute left-4 flex items-center gap-2 hover:opacity-80 transition-opacity"
+          aria-label="Mon profil"
+        >
+          {profile?.avatar_url ? (
+            <Image
+              src={profile.avatar_url}
+              alt="Avatar"
+              width={32}
+              height={32}
+              className="rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-terra-200 flex items-center justify-center text-terra-600 text-xs font-medium">
+              {/* Initiales si pas d'avatar */}
+              {profile?.first_name?.[0]?.toUpperCase() ?? "?"}
+            </div>
+          )}
+          {(profile?.first_name || profile?.last_name) && (
+            <span className="text-sm font-medium text-stone-800 hidden sm:block">
+              {[profile.first_name, profile.last_name].filter(Boolean).join(" ")}
+            </span>
+          )}
+        </button>
+
         {/* Titre centré */}
         <div className="flex items-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-terra-500" aria-hidden="true">
@@ -34,19 +71,26 @@ export default function Navbar() {
           <span className="font-bold text-stone-900 text-base">Shared List</span>
         </div>
 
-        {/* Bouton de déconnexion en absolu à droite pour ne pas décaler le titre centré */}
-        <button
-          onClick={handleSignOut}
-          className="absolute right-4 p-2 rounded-md text-stone-700 hover:text-stone-900 hover:bg-terra-200 transition-colors"
-          aria-label="Se déconnecter"
-        >
-          {/* Icône logout */}
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-        </button>
+        {/* Boutons à droite */}
+        <div className="absolute right-4 flex items-center gap-1">
+          {/* Déconnexion */}
+          <button
+            onClick={handleSignOut}
+            className="p-2 rounded-md text-stone-700 hover:text-stone-900 hover:bg-terra-200 transition-colors"
+            aria-label="Se déconnecter"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        </div>
+
+        {showSettings && createPortal(
+          <SettingsModal profile={profile} onClose={() => setShowSettings(false)} />,
+          document.body
+        )}
 
       </div>
     </header>

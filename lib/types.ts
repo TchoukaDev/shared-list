@@ -12,6 +12,17 @@ export interface List {
   updated_at: string  // date ISO mise à jour automatiquement par Supabase
 }
 
+// Table "profiles" — informations publiques de l'utilisateur
+export interface Profile {
+  id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  avatar_url: string | null
+  created_at: string
+  updated_at: string
+}
+
 // Résultat enrichi pour la page d'accueil (liste + compteurs calculés)
 export interface ListWithCount {
   list: List
