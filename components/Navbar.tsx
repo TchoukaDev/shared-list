@@ -29,50 +29,45 @@ export default function Navbar({ profile }: Props) {
     <header className="sticky top-0 z-10 bg-terra-100 border-b border-terra-200"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
-      <div className="relative flex items-center justify-center px-4 h-14">
+      <div className="flex items-center justify-between px-4 h-14">
 
-        {/* Profil à gauche */}
-        <button
-          onClick={() => setShowSettings(true)}
-          className="absolute left-4 flex items-center gap-2 hover:opacity-80 transition-opacity"
-          aria-label="Mon profil"
-        >
-          {profile?.avatar_url ? (
-            <Image
-              src={profile.avatar_url}
-              alt="Avatar"
-              width={32}
-              height={32}
-              className="rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-terra-200 flex items-center justify-center text-terra-600">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </div>
-          )}
-          <span className="text-sm font-medium text-stone-800 hidden sm:block">
-            {[profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.email}
-          </span>
-        </button>
-
-        {/* Titre centré */}
+        {/* Titre à gauche */}
         <div className="flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-terra-500" aria-hidden="true">
-            <line x1="8" y1="6" x2="21" y2="6" />
-            <line x1="8" y1="12" x2="21" y2="12" />
-            <line x1="8" y1="18" x2="21" y2="18" />
-            <line x1="3" y1="6" x2="3.01" y2="6" />
-            <line x1="3" y1="12" x2="3.01" y2="12" />
-            <line x1="3" y1="18" x2="3.01" y2="18" />
-          </svg>
+          <Image src="/icon.svg" alt="Shared List" width={24} height={24} className="rounded-md" />
           <span className="font-bold text-stone-900 text-base">Shared List</span>
         </div>
 
-        {/* Boutons à droite */}
-        <div className="absolute right-4 flex items-center gap-1">
+        {/* Profil + logout à droite */}
+        <div className="flex items-center gap-2">
+          {/* Nom / email */}
+          <span className="text-sm font-medium text-stone-700 hidden sm:block">
+            {[profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.email}
+          </span>
+
+          {/* Avatar — ouvre les settings */}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="hover:opacity-80 transition-opacity"
+            aria-label="Mon profil"
+          >
+            {profile?.avatar_url ? (
+              <Image
+                src={profile.avatar_url}
+                alt="Avatar"
+                width={32}
+                height={32}
+                className="rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-terra-200 flex items-center justify-center text-terra-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+            )}
+          </button>
+
           {/* Déconnexion */}
           <button
             onClick={handleSignOut}
