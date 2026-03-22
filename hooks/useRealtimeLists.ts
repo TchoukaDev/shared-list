@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/client"
 import type { List, ListWithCount } from "@/lib/types"
 
@@ -15,7 +16,7 @@ export function useRealtimeLists(initialLists: ListWithCount[]): ListWithCount[]
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "lists" },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<List>) => {
           if (payload.eventType === "INSERT") {
             const newList = payload.new as List
             // Nouvelle liste — pas encore de tâches, compteurs à 0

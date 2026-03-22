@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/client"
 import type { Task } from "@/lib/types"
 
@@ -23,7 +24,7 @@ export function useRealtimeTasks(listId: string, initialTasks: Task[]): {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks" },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<Task>) => {
           // Pour INSERT et UPDATE, on filtre par list_id
           // Pour DELETE, payload.old ne contient que l'id — on tente le retrait directement
           if (payload.eventType !== "DELETE") {
