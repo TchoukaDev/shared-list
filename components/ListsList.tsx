@@ -3,6 +3,7 @@
 import ListRow from "@/components/ListRow"
 import NewListButton from "@/components/NewListButton"
 import { useRealtimeLists } from "@/hooks/useRealtimeLists"
+import { usePushNotifications } from "@/hooks/usePushNotifications"
 import type { ListWithCount } from "@/lib/types"
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 
 export default function ListsList({ lists: initialLists, userId }: Props) {
   const lists = useRealtimeLists(initialLists)
+  usePushNotifications(userId)
 
   if (!userId) {
     return null;

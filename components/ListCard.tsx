@@ -72,6 +72,13 @@ export default function ListCard({ list, tasks: initialTasks, index, userId, mem
 
     // Remplace la tâche temporaire par la vraie — conserve _reactKey pour éviter le remount
     setTasks(prev => prev.map(t => t.id === tempTask.id ? { ...data, _reactKey: tempTask._reactKey } : t))
+
+    // Notifie les autres membres — fire and forget
+    fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "task_added", listId: list.id, listName: list.name }),
+    })
   }
 
   function handleAddKeyDown(e: React.KeyboardEvent) {
@@ -116,7 +123,15 @@ export default function ListCard({ list, tasks: initialTasks, index, userId, mem
       // Rollback — previous conserve déjà _reactKey
       if (previous) setTasks(prev => [...prev, previous].sort((a, b) => a.position - b.position))
       toast.error("Impossible de supprimer la tâche")
+      return
     }
+
+    // Notifie les autres membres — fire and forget
+    fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "task_deleted", listId: list.id, listName: list.name }),
+    })
   }
 
   // ── Modifier ───────────────────────────────────────────────

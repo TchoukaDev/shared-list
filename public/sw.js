@@ -27,6 +27,38 @@ self.addEventListener("activate", (event) => {
   self.clients.claim()
 })
 
+// Push : affiche la notification reçue du serveur
+self.addEventListener("push", (event) => {
+  const data = event.data?.json() ?? {}
+  event.waitUntil(
+    self.registration.showNotification(data.title ?? "Shared List", {
+      body: data.body ?? "",
+      icon: "/icons/web-app-manifest-192x192.png",
+      badge: "/icons/web-app-manifest-192x192.png",
+      data: { url: data.url ?? "/" },
+    })
+  )
+})
+
+// Clic sur la notification — ouvre ou focus l'app
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close()
+  event.waitUntil(
+    clients.matchAll({ type: "window" }).then((clientList) => {
+      const url = event.notification.data?.url ?? "/"
+      // Si un onglet est déjà ouvert, on le focus
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
+          client.focus()
+          return
+        }
+      }
+      // Sinon on ouvre un nouvel onglet
+      clients.openWindow(url)
+    })
+  )
+})
+
 // Fetch : stratégie "network first" — on essaie le réseau, fallback sur le cache
 // On ne cache pas les appels Supabase (API, auth, realtime)
 self.addEventListener("fetch", (event) => {

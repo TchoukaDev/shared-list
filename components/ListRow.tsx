@@ -90,6 +90,13 @@ export default function ListRow({ list, index, taskCount, completedCount, userId
         toast.error("Impossible de supprimer la liste, elle n'existe peut être plus.")
         return
       }
+      // Notifie les membres avant que la liste soit supprimée en DB — fire and forget
+      fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "list_deleted", listId: list.id, listName: list.name }),
+      })
+
       toast.success("Liste supprimée avec succès")
       setShowDelete(false)
     } catch (error) {

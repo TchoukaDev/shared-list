@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { sendPushNotification } from "@/lib/sendPushNotification"
 
 export async function POST(req: NextRequest) {
   const { listId, email } = await req.json()
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
   // Vérifie que l'appelant est bien owner de la liste
   const { data: list } = await supabase
     .from("lists")
-    .select("owner_id")
+    .select("owner_id, name")
     .eq("id", listId)
     .single()
 
@@ -65,6 +66,13 @@ export async function POST(req: NextRequest) {
   if (insertError) {
     return NextResponse.json({ error: "Impossible d'ajouter le membre" }, { status: 500 })
   }
+
+  // Notifie l'utilisateur invité — on ignore l'erreur, ce n'est pas bloquant
+  await sendPushNotification([target.id], {
+    title: "Nouvelle liste partagée",
+    body: `Tu as été ajouté à la liste "${list.name}"`,
+    url: "/",
+  })
 
   return NextResponse.json({ success: true })
 }
