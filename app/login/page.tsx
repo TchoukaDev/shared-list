@@ -138,7 +138,15 @@ export default function LoginPage() {
         {/* Logo / titre */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4">
-            <img src="/icon.svg" alt="Shared List" width={48} height={48} className="rounded-xl" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width={48} height={48} className="rounded-xl" aria-hidden="true">
+              <rect width="512" height="512" rx="112" fill="#c2714f"/>
+              <line x1="176" y1="192" x2="336" y2="192" stroke="white" strokeWidth="32" strokeLinecap="round"/>
+              <line x1="176" y1="256" x2="336" y2="256" stroke="white" strokeWidth="32" strokeLinecap="round"/>
+              <line x1="176" y1="320" x2="336" y2="320" stroke="white" strokeWidth="32" strokeLinecap="round"/>
+              <circle cx="144" cy="192" r="10" fill="white"/>
+              <circle cx="144" cy="256" r="10" fill="white"/>
+              <circle cx="144" cy="320" r="10" fill="white"/>
+            </svg>
           </div>
           <h1 className="text-xl font-semibold text-stone-900">Shared List</h1>
           {/* Le sous-titre change selon l'étape */}
