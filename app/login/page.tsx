@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback } from "react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
@@ -137,8 +138,8 @@ export default function LoginPage() {
 
         {/* Logo / titre */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-terra-100 mb-4">
-            <span className="text-2xl">🛒</span>
+          <div className="inline-flex items-center justify-center mb-4">
+            <Image src="/icon.svg" alt="Shared List" width={48} height={48} className="rounded-xl" />
           </div>
           <h1 className="text-xl font-semibold text-stone-900">Shared List</h1>
           {/* Le sous-titre change selon l'étape */}
