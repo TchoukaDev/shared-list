@@ -71,7 +71,7 @@ export async function proxy(request: NextRequest) {
     return supabaseResponse
 }
 
-// Exclut les assets statiques de Next.js — inutile de vérifier l'auth sur une image
+// Exclut les assets statiques et les fichiers PWA publics de l'auth
 export const config = {
-    matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+    matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|offline|icons).*)'],
 }
