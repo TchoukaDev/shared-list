@@ -14,7 +14,8 @@ app/
     lists/[id]/page.tsx     # Détail d'une liste (ListCard + TaskItem)
   login/                    # Page publique
   api/
-    invite/route.ts         # POST — invite un utilisateur dans une liste
+    invite/route.ts         # POST — invite un utilisateur dans une liste (+ notif push)
+    notify/route.ts         # POST — envoie des notifs push aux membres (avec throttle 2min)
 proxy.ts                    # Middleware auth (renommé depuis middleware.ts en Next.js 16)
 lib/
   supabase/
@@ -42,6 +43,11 @@ components/
     SettingsModal.tsx       # Profil : prénom, nom, avatar (upload vers bucket "avatars")
 hooks/
   useMediaQuery.ts          # Hook SSR-safe pour responsive
+  useRealtimeTasks.ts       # Supabase Realtime sur tasks — expose { tasks, setTasks }
+  useRealtimeLists.ts       # Supabase Realtime sur lists
+  usePushNotifications.ts   # Abonnement Web Push — upsert dans push_subscriptions
+lib/
+  sendPushNotification.ts   # Helper partagé — récupère subscriptions + web-push.sendNotification
 ```
 
 ## Design system — "Warm Sand & Terracotta"
@@ -110,19 +116,32 @@ Couleurs des listes : `listColor(index)` dans `lib/utils.ts` — cycle automatiq
 - **Filtre DELETE** : `payload.old` ne contient que la primary key par défaut (REPLICA IDENTITY DEFAULT) — ne pas filtrer par `list_id` sur les DELETE, filtrer côté client sur INSERT/UPDATE uniquement
 - **Déduplication INSERT** : vérifier `prev.some(t => t.id === newTask.id)` pour ignorer les events de nos propres optimistic updates
 
-### 3. PWA
+### 3. PWA ✅
 - `public/manifest.json` — nom, icônes, couleurs, `display: standalone`
-- `public/sw.js` — service worker minimal (cache statique)
+- `public/sw.js` — service worker : cache statique, network-first fetch, push handler, notificationclick handler
+- `app/offline/page.tsx` — page offline styled design system
 - Composant `ServiceWorkerRegistration` (client) — enregistre le SW au montage
-- Ajouter les balises `<link rel="manifest">` et `<meta name="theme-color">` dans `app/layout.tsx`
+- Balises PWA dans `app/layout.tsx` : manifest, appleWebApp, theme-color
+- Icônes : `public/icons/web-app-manifest-192x192.png` et `512x512.png`
 
-### 4. Drag & Drop
+### 4. Notifications push ✅
+- VAPID : générer avec `npx web-push generate-vapid-keys`, stocker dans `.env.local`
+- Table `push_subscriptions` : endpoint, p256dh, auth par user (unique sur user_id + endpoint)
+- Table `notification_throttle` : (user_id, list_id) primary key, `last_sent_at` — throttle 2min pour les events de tâches
+- `usePushNotifications` : vérifie `pushManager.getSubscription()` d'abord — upsert DB uniquement si pas encore abonné
+- `lib/sendPushNotification.ts` : helper partagé évitant les appels HTTP entre routes
+- `/api/notify` : exclut l'acteur, throttle task_added/task_deleted, envoie via sendPushNotification
+- `/api/invite` : notifie l'invité directement après insertion dans list_members
+- Events notifiés : `list_deleted`, `task_added`, `task_deleted` (throttle 2min), invitation dans une liste
+- L'acteur (user.id) est toujours exclu des destinataires
+
+### 5. Drag & Drop
 - Bibliothèque : `@dnd-kit/core` + `@dnd-kit/sortable` (légère, tactile, accessible)
 - Drag des listes sur la page d'accueil → mettre à jour l'ordre en DB
 - Drag des tâches dans une liste → mettre à jour le champ `position` en DB
 - Gérer l'optimistic update : réordonner localement avant la confirmation Supabase
 
-### 5. Inviter un utilisateur dans une liste
+### 6. Inviter un utilisateur dans une liste
 - **État actuel** : UI + route `/api/invite` fonctionnelle, table `profiles` créée avec trigger sync depuis `auth.users`
 - La route utilise encore `auth.admin.listUsers()` — **à remplacer** par `.from("profiles").select("id").eq("email", email).single()`
 - Seul le owner peut inviter/modifier/supprimer une liste — boutons cachés + guards dans les handlers + RLS

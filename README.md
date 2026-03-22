@@ -19,6 +19,8 @@ Application de listes partagées en temps réel. Crée des listes, invite des me
 - Mises à jour en temps réel via Supabase Realtime (WebSocket)
 - Profil utilisateur avec avatar (upload vers Supabase Storage)
 - Interface responsive — swipe mobile, menu desktop
+- PWA installable (manifest, service worker, offline fallback)
+- Notifications push Web (VAPID) — invitation, tâche ajoutée/supprimée, liste supprimée
 
 ## Installation
 
@@ -32,6 +34,11 @@ Crée un fichier `.env.local` à la racine :
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=eyJ...
 SUPABASE_SECRET_KEYS=eyJ...
+
+# Push notifications (générer via web-push)
+VAPID_SUBJECT=mailto:contact@example.com
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=Bxxx...
+VAPID_PRIVATE_KEY=xxx...
 ```
 
 ```bash
@@ -221,6 +228,46 @@ on storage.objects for delete to authenticated
 using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 ```
 
+### Tables push notifications
+
+```sql
+-- Abonnements push par utilisateur
+create table push_subscriptions (
+  id       uuid primary key default gen_random_uuid(),
+  user_id  uuid not null references auth.users(id) on delete cascade,
+  endpoint text not null,
+  p256dh   text not null,
+  auth     text not null,
+  unique (user_id, endpoint)
+);
+
+-- Throttle : max 1 notif par liste / utilisateur toutes les 2 minutes (tâches seulement)
+create table notification_throttle (
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  list_id     uuid not null references lists(id) on delete cascade,
+  last_sent_at timestamptz not null,
+  primary key (user_id, list_id)
+);
+```
+
+RLS pour `push_subscriptions` :
+
+```sql
+-- Lecture et écriture limitées au propriétaire
+create policy "push_subscriptions: select" on push_subscriptions for select to authenticated using (user_id = auth.uid());
+create policy "push_subscriptions: insert" on push_subscriptions for insert to authenticated with check (user_id = auth.uid());
+create policy "push_subscriptions: upsert" on push_subscriptions for update to authenticated using (user_id = auth.uid());
+create policy "push_subscriptions: delete" on push_subscriptions for delete to authenticated using (user_id = auth.uid());
+```
+
+### Générer les clés VAPID
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Copier les clés dans `.env.local`.
+
 ### Realtime
 
 Dashboard → Database → Replication → cocher les tables `lists` et `tasks` dans la publication `supabase_realtime`.
@@ -267,3 +314,16 @@ images: {
   remotePatterns: [{ protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" }]
 }
 ```
+
+### Les notifications push n'arrivent pas
+- Vérifier que l'app est servie en HTTPS (les SW et Web Push nécessitent HTTPS — localhost est l'exception)
+- Vérifier que les clés VAPID sont bien définies dans `.env.local` et que `NEXT_PUBLIC_VAPID_PUBLIC_KEY` est accessible côté client
+- Vérifier que la permission `Notification` est accordée dans le navigateur (`Notification.permission === "granted"`)
+- Vérifier que le service worker est bien enregistré (DevTools → Application → Service Workers)
+- En développement, les notifications push ne fonctionnent pas si le serveur push du navigateur est injoignable (ex: réseau restreint)
+
+### La notification push est reçue mais ne s'affiche pas
+Le service worker doit appeler `self.registration.showNotification(...)` dans l'event `push`. Vérifier `public/sw.js`.
+
+### `upsert` push_subscriptions échoue avec "duplicate key"
+S'assurer que le `upsert` utilise `onConflict: "user_id,endpoint"` et que la contrainte unique existe bien sur la table.
