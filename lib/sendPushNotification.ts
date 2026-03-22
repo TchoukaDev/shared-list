@@ -1,12 +1,6 @@
 import webpush from "web-push"
 import { createAdminClient } from "@/lib/supabase/admin"
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
-
 interface Payload {
   title: string
   body: string
@@ -15,6 +9,12 @@ interface Payload {
 
 // Envoie une notification push à une liste de destinataires
 export async function sendPushNotification(recipientIds: string[], payload: Payload) {
+  // Initialisé ici (pas au niveau module) pour éviter le crash au build quand les env vars sont absentes
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  )
   if (!recipientIds.length) return
 
   const admin = createAdminClient()
