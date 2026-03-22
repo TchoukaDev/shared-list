@@ -166,7 +166,7 @@ export default function ListCard({ list, tasks: initialTasks, index, userId, mem
       {/* ── Tâches ── */}
       {tasks.length > 0 ? (
         <ul className="divide-y divide-stone-100">
-          {tasks.map(task => (
+          {[...tasks].sort((a, b) => Number(a.completed) - Number(b.completed)).map(task => (
             <TaskItem
               key={task._reactKey}
               task={task}
