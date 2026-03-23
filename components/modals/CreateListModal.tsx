@@ -1,12 +1,9 @@
 "use client"
 
-// Modale de création d'une liste.
-// Reçoit onClose pour fermer depuis l'extérieur.
-// La logique de soumission sera ajoutée ultérieurement.
-
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { toast } from "react-toastify";
+import { useState } from "react"
+import { useMutation } from "@tanstack/react-query"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "react-toastify"
 
 interface Props {
   onClose: () => void
@@ -14,51 +11,50 @@ interface Props {
 }
 
 export default function CreateListModal({ onClose, userId }: Props) {
-  const [listName, setListName] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [listName, setListName] = useState("")
+  const [validationError, setValidationError] = useState("")
   const supabase = createClient()
 
-  if (!userId) {
-    return null;
-  }
+  // Erreur serveur (doublon, insert échoué) — gérée via mutation.error
+  // Erreur locale (nom vide, trop long) — gérée via validationError
+  const mutation = useMutation({
+    mutationFn: async (name: string) => {
+      const { count: existingName, error } = await supabase
+        .from("lists")
+        .select("*", { count: "exact", head: true })
+        .eq("name", name)
+      if (error) throw new Error("Erreur lors de la vérification du nom")
+      if (existingName && existingName > 0) throw new Error("Ce nom de liste est déjà utilisé")
+      const { error: insertError } = await supabase
+        .from("lists")
+        .insert({ name, owner_id: userId })
+      if (insertError) throw new Error("Impossible de créer la liste")
+    },
+    onSuccess: () => {
+      toast.success("Liste créée avec succès")
+      onClose()
+    },
+  })
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      setError("");
-      if (listName.trim() === "") {
-        setError("Le nom de la liste est requis");
-        return;
-      }
-      if (listName.length > 255) {
-        setError("Le nom de la liste doit être inférieur à 255 caractères");
-        return;
-      }
+  if (!userId) return null
 
-      const { count: existingName, error } = await supabase.from("lists").select("*", { count: "exact", head: true }).eq("name", listName);
-
-
-      if (error) {
-        setError("Une erreur est survenue lors de la vérification du nom de la liste");
-        return;
-      }
-      if (existingName && existingName > 0) {
-        setError("Ce nom de liste est déjà utilisé");
-        return;
-      }
-      await supabase.from("lists").insert({ name: listName, owner_id: userId })
-      toast.success("Liste créée avec succès");
-      onClose();
-
-    } catch (error) {
-      setError("Une erreur est survenue lors de la création de la liste");
-
-    } finally {
-      setLoading(false);
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setValidationError("")
+    if (!listName.trim()) {
+      setValidationError("Le nom de la liste est requis")
+      return
     }
+    if (listName.length > 255) {
+      setValidationError("Le nom de la liste doit être inférieur à 255 caractères")
+      return
+    }
+    mutation.mutate(listName.trim())
   }
+
+  // Priorité : erreur locale > erreur serveur
+  const errorMessage = validationError || (mutation.error instanceof Error ? mutation.error.message : "")
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
@@ -82,11 +78,11 @@ export default function CreateListModal({ onClose, userId }: Props) {
             type="text"
             placeholder="Nom de la liste"
             value={listName}
-            onChange={(e) => setListName(e.target.value)}
+            onChange={(e) => { setListName(e.target.value); setValidationError("") }}
             autoFocus
             className="w-full px-3 py-2.5 text-sm rounded-md border border-stone-200 bg-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-terra-500/30 focus:border-terra-500 transition"
           />
-          {error && <p className="text-sm text-red-500 mt-2 text-center">{error}</p>}
+          {errorMessage && <p className="text-sm text-red-500 mt-2 text-center">{errorMessage}</p>}
           <div className="flex justify-end gap-2 mt-4">
             <button
               type="button"
@@ -96,7 +92,7 @@ export default function CreateListModal({ onClose, userId }: Props) {
               Annuler
             </button>
             <button
-              disabled={loading}
+              disabled={mutation.isPending}
               className="px-4 py-2 text-sm font-medium bg-terra-500 hover:bg-terra-600 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               type="submit"
             >
