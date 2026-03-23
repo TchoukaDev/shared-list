@@ -16,7 +16,7 @@ interface Props {
 }
 
 const SWIPE_THRESHOLD = 60
-const ACTIONS_WIDTH = 96
+const ACTIONS_WIDTH = 128
 
 export default function ListRowMobile({ list, index, taskCount, completedCount, isOwner, onEdit, onDelete }: Props) {
   const color = listColor(index)
@@ -32,7 +32,9 @@ export default function ListRowMobile({ list, index, taskCount, completedCount, 
   // Ferme le swipe sur tap en dehors
   useEffect(() => {
     if (!swiped) return
-    function handleOutsideClick() {
+    function handleOutsideClick(e: PointerEvent) {
+      // Ne pas fermer si le tap est sur un bouton d'action — leur onClick gère la fermeture
+      if ((e.target as HTMLElement).closest("[data-action]")) return
       setOffsetX(0)
       setSwiped(false)
       justClosedSwipe.current = true

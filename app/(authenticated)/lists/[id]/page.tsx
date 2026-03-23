@@ -25,13 +25,8 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
     .eq("list_id", id)
     .order("position", { ascending: true })
 
-  // Calcule l'index de la liste pour déterminer sa couleur
-  const { data: allLists } = await supabase
-    .from("lists")
-    .select("id")
-    .order("updated_at", { ascending: true })
-
-  const listIndex = allLists?.findIndex(l => l.id === id) ?? 0
+  // L'index de couleur est calculé côté client depuis le cache React Query (voir ListCard).
+  // On passe 0 en fallback — utilisé uniquement si le cache est vide (navigation directe par URL).
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
@@ -51,7 +46,7 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
         </div>
       )}
 
-      <ListCard list={list} tasks={tasks ?? []} index={listIndex} userId={user.id} />
+      <ListCard list={list} tasks={tasks ?? []} index={0} userId={user.id} />
     </div>
   )
 }

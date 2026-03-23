@@ -26,6 +26,12 @@ export default function ListCard({ list, tasks: initialTasks, index, userId, mem
   const [addingTask, setAddingTask] = useState(false)
   const [newTaskContent, setNewTaskContent] = useState("")
 
+  // Résout l'index de couleur depuis le cache ["lists", userId] si disponible.
+  // Fallback sur la prop index (0 depuis la page détail, correct depuis ListsList).
+  const lists = queryClient.getQueryData<import("@/lib/types").ListWithCount[]>(["lists", userId])
+  const cachedIndex = lists?.findIndex(item => item.list.id === list.id) ?? -1
+  const colorIndex = cachedIndex >= 0 ? cachedIndex : index
+
   const { data: tasks = [] } = useQuery<TaskWithKey[]>({
     queryKey: ["tasks", list.id],
     queryFn: async () => {
@@ -46,7 +52,7 @@ export default function ListCard({ list, tasks: initialTasks, index, userId, mem
   }
 
   const completedCount = tasks.filter(t => t.completed).length
-  const color = listColor(index)
+  const color = listColor(colorIndex)
 
   const updatedAt = list.updated_at
     ? new Date(list.updated_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
