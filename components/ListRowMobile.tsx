@@ -98,8 +98,8 @@ export default function ListRowMobile({ list, index, taskCount, completedCount, 
         >
           <button
             data-action
-            onClick={() => { setOffsetX(0); setSwiped(false); onEdit?.() }}
-            className="flex-1 flex items-center justify-center bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors"
+            onPointerDown={(e) => { e.stopPropagation(); setOffsetX(0); setSwiped(false); onEdit?.() }}
+            className="flex-1 flex items-center justify-center rounded-l-lg bg-stone-100 active:bg-stone-200 text-stone-600 transition-colors"
             aria-label="Modifier la liste"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -110,8 +110,8 @@ export default function ListRowMobile({ list, index, taskCount, completedCount, 
 
           <button
             data-action
-            onClick={() => { setOffsetX(0); setSwiped(false); onDelete?.() }}
-            className="flex-1 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white transition-colors"
+            onPointerDown={(e) => { e.stopPropagation(); setOffsetX(0); setSwiped(false); onDelete?.() }}
+            className="flex-1 flex items-center justify-center bg-red-500 active:bg-red-600 text-white transition-colors"
             aria-label="Supprimer la liste"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
