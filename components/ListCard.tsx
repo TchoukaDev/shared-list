@@ -1,14 +1,16 @@
 "use client"
 
 import { useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "react-toastify"
 import { createClient } from "@/lib/supabase/client"
 import type { List, Task } from "@/lib/types"
-
-
 import { listColor } from "@/lib/utils"
 import TaskItem from "./TaskItem"
 import { useRealtimeTasks } from "@/hooks/useRealtimeTasks"
+import { fetchTasks } from "@/lib/queries"
+
+type TaskWithKey = Task & { _reactKey: string }
 
 interface Props {
   list: List
@@ -20,9 +22,28 @@ interface Props {
 
 export default function ListCard({ list, tasks: initialTasks, index, userId, memberNames = {} }: Props) {
   const supabase = createClient()
-  const { tasks, setTasks } = useRealtimeTasks(list.id, initialTasks)
+  const queryClient = useQueryClient()
   const [addingTask, setAddingTask] = useState(false)
   const [newTaskContent, setNewTaskContent] = useState("")
+
+  const { data: tasks = [] } = useQuery<TaskWithKey[]>({
+    queryKey: ["tasks", list.id],
+    queryFn: async () => {
+      const data = await fetchTasks(list.id)
+      return data.map(t => ({ ...t, _reactKey: t.id }))
+    },
+    initialData: initialTasks.map(t => ({ ...t, _reactKey: t.id })),
+  })
+
+  useRealtimeTasks(list.id)
+
+  // Alias pour les optimistic updates — même signature que l'ancien setTasks
+  const setTasks = (updater: TaskWithKey[] | ((prev: TaskWithKey[]) => TaskWithKey[])) => {
+    queryClient.setQueryData<TaskWithKey[]>(["tasks", list.id], (prev) => {
+      const current = prev ?? []
+      return typeof updater === "function" ? updater(current) : updater
+    })
+  }
 
   const completedCount = tasks.filter(t => t.completed).length
   const color = listColor(index)
@@ -42,7 +63,7 @@ export default function ListCard({ list, tasks: initialTasks, index, userId, mem
 
     // Optimistic update
     const tempId = `temp-${Date.now()}`
-    const tempTask: Task & { _reactKey: string } = {
+    const tempTask: TaskWithKey = {
       id: tempId,
       _reactKey: tempId,
       list_id: list.id,
@@ -64,14 +85,17 @@ export default function ListCard({ list, tasks: initialTasks, index, userId, mem
       .single()
 
     if (error || !data) {
-      // Rollback
       setTasks(prev => prev.filter(t => t.id !== tempTask.id))
       toast.error("Impossible d'ajouter la tâche")
       return
     }
 
-    // Remplace la tâche temporaire par la vraie — conserve _reactKey pour éviter le remount
-    setTasks(prev => prev.map(t => t.id === tempTask.id ? { ...data, _reactKey: tempTask._reactKey } : t))
+    // Remplace la tâche temporaire par la vraie.
+    // Filtre aussi l'éventuel doublon ajouté par Realtime avant que le retour serveur arrive.
+    setTasks(prev => {
+      const filtered = prev.filter(t => t.id !== tempTask.id && t.id !== data.id)
+      return [...filtered, { ...data, _reactKey: tempTask._reactKey }]
+    })
 
     // Notifie les autres membres — fire and forget
     fetch("/api/notify", {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import QueryProvider from "@/components/QueryProvider";
 import ToastProvider from "@/components/ToastProvider";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import "react-toastify/dist/ReactToastify.css";
@@ -36,7 +37,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <QueryProvider>
+          {children}
+        </QueryProvider>
         <ToastProvider />
         <ServiceWorkerRegistration />
       </body>

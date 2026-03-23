@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/client"
 import type { List, ListWithCount } from "@/lib/types"
 
-export function useRealtimeLists(initialLists: ListWithCount[]): ListWithCount[] {
-  const [lists, setLists] = useState<ListWithCount[]>(initialLists)
+export function useRealtimeLists(userId: string): void {
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     const supabase = createClient()
@@ -17,37 +18,33 @@ export function useRealtimeLists(initialLists: ListWithCount[]): ListWithCount[]
         "postgres_changes",
         { event: "*", schema: "public", table: "lists" },
         (payload: RealtimePostgresChangesPayload<List>) => {
-          if (payload.eventType === "INSERT") {
-            const newList = payload.new as List
-            // Nouvelle liste — pas encore de tâches, compteurs à 0
-            setLists((prev) => [...prev, { list: newList, taskCount: 0, completedCount: 0 }])
-          }
+          queryClient.setQueryData<ListWithCount[]>(["lists", userId], (prev) => {
+            if (!prev) return prev
 
-          if (payload.eventType === "UPDATE") {
-            const updatedList = payload.new as List
-            // On remplace la liste mais on conserve les compteurs existants
-            setLists((prev) =>
-              prev.map((item) =>
-                item.list.id === updatedList.id
-                  ? { ...item, list: updatedList }
-                  : item
+            if (payload.eventType === "INSERT") {
+              const newList = payload.new as List
+              if (prev.some(item => item.list.id === newList.id)) return prev
+              return [...prev, { list: newList, taskCount: 0, completedCount: 0 }]
+            }
+
+            if (payload.eventType === "UPDATE") {
+              const updatedList = payload.new as List
+              return prev.map(item =>
+                item.list.id === updatedList.id ? { ...item, list: updatedList } : item
               )
-            )
-          }
+            }
 
-          if (payload.eventType === "DELETE") {
-            const deletedId = payload.old.id as string
-            setLists((prev) => prev.filter((item) => item.list.id !== deletedId))
-          }
+            if (payload.eventType === "DELETE") {
+              const deletedId = (payload.old as { id: string }).id
+              return prev.filter(item => item.list.id !== deletedId)
+            }
+
+            return prev
+          })
         }
       )
       .subscribe()
 
-    // Nettoyage : on se désabonne quand le composant se démonte
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, []) // [] : on s'abonne une seule fois au montage
-
-  return lists
+    return () => { supabase.removeChannel(channel) }
+  }, [userId, queryClient])
 }

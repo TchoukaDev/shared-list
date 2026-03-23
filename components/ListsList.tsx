@@ -1,23 +1,28 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import ListRow from "@/components/ListRow"
 import NewListButton from "@/components/NewListButton"
 import { useRealtimeLists } from "@/hooks/useRealtimeLists"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
+import { fetchLists } from "@/lib/queries"
 import type { ListWithCount } from "@/lib/types"
 
 interface Props {
   lists: ListWithCount[]
-  userId: string | null
+  userId: string
 }
 
 export default function ListsList({ lists: initialLists, userId }: Props) {
-  const lists = useRealtimeLists(initialLists)
+  const { data: lists = [] } = useQuery({
+    queryKey: ["lists", userId],
+    queryFn: fetchLists,
+    initialData: initialLists,
+  })
+
+  useRealtimeLists(userId)
   usePushNotifications(userId)
 
-  if (!userId) {
-    return null;
-  }
   return (
     <div className="px-4 py-6 space-y-3 max-w-lg mx-auto">
 
